@@ -6,3 +6,4 @@ loguru>=0.7.3
 peft>=0.16.0
 torch>=2.7.1
 transformers>=4.54.0
+unsloth[colab-new]==2024.8

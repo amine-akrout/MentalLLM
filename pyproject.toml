@@ -7,12 +7,13 @@ requires-python = ">=3.12"
 dependencies = [
     "accelerate>=1.9.0",
     "bitsandbytes>=0.46.1",
-    "datasets>=4.0.0",
+    "datasets>=3.4.1,<4.0.0",
     "huggingface-hub[hf-xet]>=0.34.2",
     "loguru>=0.7.3",
     "peft>=0.16.0",
     "torch>=2.7.1",
     "transformers>=4.54.0",
+    "unsloth[windows]",
 ]
 
 [dependency-groups]
@@ -20,3 +21,6 @@ dev = [
     "jupyter>=1.1.1",
     "notebook<7",
 ]
+
+[tool.uv.sources]
+unsloth = { git = "https://github.com/unslothai/unsloth.git" }
