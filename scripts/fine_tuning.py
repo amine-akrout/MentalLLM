@@ -12,7 +12,7 @@ from unsloth import FastLanguageModel
 import torch
 from datasets import Dataset, load_dataset
 from loguru import logger
-from transformers import TrainingArguments
+from transformers import EarlyStoppingCallback, TrainingArguments
 from trl import SFTTrainer
 
 # --- Configuration ---
@@ -93,57 +93,83 @@ def main():
 
     # --- 4. Load and Prepare Dataset ---
     dataset = load_dataset("samhog/psychology-10k", split="train")
-    # Assuming the dataset has 'instruction', 'input', and 'output' fields
-    text_data = {"text": []}
 
-    # Iterate over the dataset and format the data
-    for example in dataset:  # Iterate directly over the dataset
-        instruction = example["instruction"]
-        input_text = example["input"]
-        output_text = example["output"]
+    # Shuffle the entire dataset first
+    dataset = dataset.shuffle(seed=42)
 
-        # Format the text
-        text_format = f"<|system|>{instruction}<|end|><|user|>{input_text}<|end|><|assistant|>{output_text}<|end|>"
-        text_data["text"].append(text_format)
+    # Split into train and validation sets (e.g., 90% train, 10% validation)
+    train_val_split = dataset.train_test_split(test_size=0.1)
+    raw_train_dataset = train_val_split["train"]
+    raw_eval_dataset = train_val_split["test"]
+
+    logger.info(f"Total dataset size: {len(dataset)}")
+    logger.info(f"Train dataset size: {len(raw_train_dataset)}")
+    logger.info(f"Eval dataset size: {len(raw_eval_dataset)}")
+
+    def format_instruction(sample):
+        return f"### Instruction:\n{sample['instruction']}\n\n### Input:\n{sample['input']}\n\n### Response:\n{sample['output']}"
+
+    # format training and eval data
+    train_text_data = {
+        "text": [format_instruction(sample) for sample in raw_train_dataset]
+    }
+
+    eval_text_data = {
+        "text": [format_instruction(sample) for sample in raw_eval_dataset]
+    }
 
     # Convert the dictionary to a Dataset object
-    train_dataset = Dataset.from_dict(text_data)
-    del text_data
+    train_dataset = Dataset.from_dict(train_text_data)
+    eval_dataset = Dataset.from_dict(eval_text_data)
+    del train_text_data
+    del eval_text_data
     for i, row in enumerate(train_dataset.select(range(1))):
         for key in row.keys():
             logger.info(f"Row {i + 1}:\n{key}: {row[key]}\n")
 
     # --- 5. Setup Trainer ---
     logger.info("Setting up SFTTrainer...")
-    sample_train_dataset = train_dataset.shuffle().select(range(1000))
+    training_args = TrainingArguments(
+        per_device_train_batch_size=BATCH_SIZE,
+        gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
+        warmup_steps=WARMUP_STEPS,
+        num_train_epochs=EPOCHS,
+        learning_rate=LEARNING_RATE,
+        fp16=not torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False,
+        logging_steps=LOGGING_STEPS,
+        optim="adamw_8bit",
+        weight_decay=0.01,
+        lr_scheduler_type="linear",
+        seed=3407,
+        output_dir=OUTPUT_DIR,
+        # --- Make save_strategy match eval_strategy ---
+        save_strategy="steps",  # <-- Changed from "epoch"
+        eval_strategy="steps",  # <-- Keep as "steps"
+        # --- End matching strategies ---
+        eval_steps=LOGGING_STEPS,  # Evaluate every LOGGING_STEPS
+        save_steps=LOGGING_STEPS,  # Save every LOGGING_STEPS (now matches eval_steps)
+        save_total_limit=SAVE_TOTAL_LIMIT,
+        dataloader_pin_memory=False,
+        report_to="none",
+        # --- Early Stopping Arguments (should now work) ---
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        # --- End Early Stopping Arguments ---
+    )
 
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
-        train_dataset=sample_train_dataset,
-        dataset_text_field="text",  # This matches the field name in your formatted data
+        train_dataset=train_dataset,  # Provide the formatted train dataset
+        eval_dataset=eval_dataset,  # <-- PROVIDE THE FORMATTED eval dataset HERE
+        dataset_text_field="text",
         max_seq_length=MAX_SEQ_LENGTH,
-        dataset_num_proc=1,  # Number of processes for data loading (adjust if needed)
-        packing=False,  # Packing can improve efficiency but changes data format slightly
-        args=TrainingArguments(
-            per_device_train_batch_size=BATCH_SIZE,
-            gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
-            warmup_steps=WARMUP_STEPS,
-            num_train_epochs=EPOCHS,
-            learning_rate=LEARNING_RATE,
-            fp16=not torch.cuda.is_bf16_supported(),  # Use FP16 if BF16 not supported
-            bf16=torch.cuda.is_bf16_supported(),  # Use BF16 if supported
-            logging_steps=LOGGING_STEPS,
-            optim="adamw_8bit",  # Optimizer optimized for QLoRA/Unsloth
-            weight_decay=0.01,
-            lr_scheduler_type="linear",
-            seed=3407,
-            output_dir=OUTPUT_DIR,
-            save_strategy=SAVE_STRATEGY,
-            save_total_limit=SAVE_TOTAL_LIMIT,
-            dataloader_pin_memory=False,  # Recommended for Unsloth
-            report_to="none",  # Disable reporting to avoid issues with Unsloth
-        ),
+        dataset_num_proc=1,  # Can increase if you have more CPU cores
+        packing=False,
+        args=training_args,  # Your corrected TrainingArguments
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
     )
     logger.info("SFTTrainer initialized.")
 
@@ -165,7 +191,6 @@ def main():
     try:
         # Enable faster inference mode for saving
         FastLanguageModel.for_inference(model)
-
         # Export to GGUF
         # Quantization method: "q4_k_m" is a good balance, "q8_0" is higher quality
         gguf_output_dir = os.path.join(OUTPUT_DIR, "gguf")
