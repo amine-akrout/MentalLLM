@@ -210,3 +210,4 @@ __marimo__/
 /scripts/unsloth_compiled_cache/__pycache__
 
 *cache
+*.gguf
