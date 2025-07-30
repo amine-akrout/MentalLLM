@@ -1568,12 +1568,16 @@ dependencies = [
     { name = "accelerate" },
     { name = "bitsandbytes" },
     { name = "datasets" },
+    { name = "fastapi" },
     { name = "huggingface-hub", extra = ["hf-xet"] },
     { name = "loguru" },
+    { name = "ollama" },
     { name = "peft" },
+    { name = "pydantic" },
     { name = "torch" },
     { name = "transformers" },
     { name = "unsloth", extra = ["windows"] },
+    { name = "uvicorn" },
     { name = "vllm" },
 ]
 
@@ -1588,12 +1592,16 @@ requires-dist = [
     { name = "accelerate", specifier = ">=1.9.0" },
     { name = "bitsandbytes", specifier = ">=0.46.1" },
     { name = "datasets", specifier = ">=3.4.1,<4.0.0" },
+    { name = "fastapi", specifier = ">=0.116.1" },
     { name = "huggingface-hub", extras = ["hf-xet"], specifier = ">=0.34.2" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "ollama", specifier = ">=0.5.1" },
     { name = "peft", specifier = ">=0.16.0" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "torch", specifier = ">=2.7.1" },
     { name = "transformers", specifier = ">=4.54.0" },
     { name = "unsloth", extras = ["windows"], git = "https://github.com/unslothai/unsloth.git" },
+    { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "vllm", specifier = ">=0.10.0" },
 ]
 
@@ -2164,6 +2172,19 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/56/9a/fff8376f8e3d084cd1530e1ef7b879bb7d6d265620c95c1b322725c694f4/nvidia_nvtx_cu12-12.6.77-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b90bed3df379fa79afbd21be8e04a0314336b8ae16768b58f2d34cb1d04cd7d2", size = 89276 },
     { url = "https://files.pythonhosted.org/packages/9e/4e/0d0c945463719429b7bd21dece907ad0bde437a2ff12b9b12fee94722ab0/nvidia_nvtx_cu12-12.6.77-py3-none-manylinux2014_x86_64.whl", hash = "sha256:6574241a3ec5fdc9334353ab8c479fe75841dbe8f4532a8fc97ce63503330ba1", size = 89265 },
+]
+
+[[package]]
+name = "ollama"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/96/c7fe0d2d1b3053be614822a7b722c7465161b3672ce90df71515137580a0/ollama-0.5.1.tar.gz", hash = "sha256:5a799e4dc4e7af638b11e3ae588ab17623ee019e496caaf4323efbaa8feeff93", size = 41112 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/76/3f96c8cdbf3955d7a73ee94ce3e0db0755d6de1e0098a70275940d1aff2f/ollama-0.5.1-py3-none-any.whl", hash = "sha256:4c8839f35bc173c7057b1eb2cbe7f498c1a7e134eafc9192824c8aecb3617506", size = 13369 },
 ]
 
 [[package]]

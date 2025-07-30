@@ -1,9 +1,14 @@
 accelerate>=1.9.0
 bitsandbytes>=0.46.1
-datasets>=4.0.0
+datasets>=3.4.1,<4.0.0
+fastapi>=0.116.1
 huggingface-hub[hf-xet]>=0.34.2
 loguru>=0.7.3
+ollama>=0.5.1
 peft>=0.16.0
+pydantic>=2.11.7
 torch>=2.7.1
 transformers>=4.54.0
-unsloth[colab-new]==2024.8
+unsloth[windows]
+uvicorn>=0.35.0
+vllm>=0.10.0
