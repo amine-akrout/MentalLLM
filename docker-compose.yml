@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Ollama Service
   ollama:
@@ -36,6 +34,18 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
+
+  # Streamlit Service
+  mental-llm-ui:
+    build: .
+    container_name: mental-llm-streamlit-ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - mental-llm-api
+    environment:
+      - FASTAPI_URL=http://mental-llm-api:8000
+    command: streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
 
 volumes:
   ollama_data:
