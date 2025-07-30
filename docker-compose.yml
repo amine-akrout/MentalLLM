@@ -1,0 +1,51 @@
+services:
+  # Ollama Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    volumes:
+      - ./models:/models_input:ro
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "ollama serve & sleep 5 && ollama create mental-llm-phi3 -f /models_input/Modelfile 
+        && wait",
+      ]
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # FastAPI Service
+  mental-llm-api:
+    build: .
+    container_name: mental-llm-api
+    ports:
+      - "8000:8000" 
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+  # Streamlit Service
+  mental-llm-ui:
+    build: .
+    container_name: mental-llm-streamlit-ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - mental-llm-api
+    environment:
+      - FASTAPI_URL=http://mental-llm-api:8000
+    command: streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  ollama_data:
